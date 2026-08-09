@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stunt Flashcards</title>
+<meta name="description" content="Paste a StuntListing list URL and learn everyone's names, faces, and skills with flashcards.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand">🎬 Stunt Flashcards</div>
+  <div class="tagline">Paste a list. Learn every name on the crew.</div>
+  <div class="hazard-stripe" aria-hidden="true"></div>
+</header>
+
+<main>
+
+  <!-- ============ SETUP ============ -->
+  <section id="setup" class="panel">
+    <label class="field-label" for="url-input">StuntListing list URL</label>
+    <div class="url-row">
+      <input id="url-input" type="url" inputmode="url" spellcheck="false"
+             placeholder="https://stuntlisting.com/lists/…">
+      <button id="build-btn" class="btn primary">Build flashcards</button>
+    </div>
+    <div id="setup-status" class="status hidden" role="status"></div>
+
+    <div class="settings-grid">
+      <fieldset class="settings">
+        <legend>Study mode</legend>
+        <label class="opt">
+          <input type="radio" name="mode" value="flip" checked>
+          <span><strong>No names</strong> — answer in your head, flip to check</span>
+        </label>
+        <label class="opt">
+          <input type="radio" name="mode" value="choice">
+          <span><strong>Multiple choice</strong> — pick from 4 names</span>
+        </label>
+      </fieldset>
+
+      <fieldset class="settings">
+        <legend>Card types</legend>
+        <label class="opt">
+          <input type="checkbox" id="opt-headshot" checked disabled>
+          <span><strong>Headshot → name</strong> (always on — everyone’s headshot is used)</span>
+        </label>
+        <label class="opt">
+          <input type="checkbox" id="opt-about" checked>
+          <span><strong>About Me → who is it?</strong></span>
+        </label>
+        <label class="opt">
+          <input type="checkbox" id="opt-skills" checked>
+          <span><strong>Skill description → whose skill?</strong></span>
+        </label>
+      </fieldset>
+    </div>
+
+    <div class="setup-actions">
+      <button id="resume-btn" class="btn ghost hidden"></button>
+      <button id="demo-btn" class="btn ghost">Try a demo roster (fictional people)</button>
+    </div>
+  </section>
+
+  <!-- ============ STUDY ============ -->
+  <section id="study" class="hidden">
+    <div class="study-top">
+      <button id="back-btn" class="btn small">← Setup</button>
+      <div class="study-meta">
+        <div id="list-title" class="list-title"></div>
+        <div class="meta-row">
+          <span id="progress"></span>
+          <span id="score" class="score"></span>
+        </div>
+      </div>
+      <button id="reshuffle-btn" class="btn small" title="Rebuild a fresh random deck">🔀 New deck</button>
+    </div>
+
+    <div class="card-stage">
+      <div id="card" class="card" tabindex="0" role="button" aria-label="Flashcard — activate to flip">
+        <div class="card-face card-front" id="card-front"></div>
+        <div class="card-face card-back" id="card-back"></div>
+      </div>
+    </div>
+
+    <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+
+    <div id="choices" class="choices hidden"></div>
+
+    <div id="selfgrade" class="selfgrade hidden">
+      <button id="grade-miss" class="btn grade bad">✗ Missed it</button>
+      <button id="grade-hit" class="btn grade good">✓ Got it</button>
+    </div>
+
+    <div class="controls">
+      <button id="prev-btn" class="btn nav" aria-label="Previous card">←</button>
+      <button id="flip-btn" class="btn primary wide">Flip</button>
+      <button id="next-btn" class="btn nav" aria-label="Next card">→</button>
+    </div>
+
+    <div class="kbd-hint">Space&nbsp;=&nbsp;flip &nbsp;·&nbsp; ←&nbsp;→&nbsp;=&nbsp;cards &nbsp;·&nbsp; 1–4&nbsp;=&nbsp;answer</div>
+  </section>
+
+  <!-- ============ DONE ============ -->
+  <section id="done" class="panel hidden">
+    <h2 id="done-headline">Deck complete!</h2>
+    <p id="done-summary"></p>
+    <div class="done-actions">
+      <button id="again-btn" class="btn primary">Study again — new shuffle</button>
+      <button id="missed-btn" class="btn">Review missed cards</button>
+      <button id="done-back-btn" class="btn ghost">← Setup</button>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  Rosters are fetched on demand and studied in your browser — nothing is stored server-side.
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>

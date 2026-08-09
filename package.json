@@ -1,0 +1,15 @@
+{
+  "name": "stunt-flashcards",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Paste a StuntListing list URL and learn everyone's names, faces, bios, and skills with flashcards. Runs on Cloudflare Workers.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "devDependencies": {
+    "wrangler": "^4.27.0"
+  }
+}
