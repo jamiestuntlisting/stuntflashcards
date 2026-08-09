@@ -15,6 +15,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    if (url.pathname === '/api/config') return handleConfig(env);
     if (url.pathname === '/api/list') return handleList(request, env, ctx);
     if (url.pathname === '/api/img') return handleImage(request, env, ctx);
     if (url.pathname.startsWith('/api/')) return jsonResponse({ ok: false, error: 'Unknown API endpoint' }, 404);
@@ -31,6 +32,18 @@ function jsonResponse(data, status = 200, extraHeaders = {}) {
       'Access-Control-Allow-Origin': '*',
       ...extraHeaders,
     },
+  });
+}
+
+// GET /api/config — lets the page offer a one-click sample deck without
+// hardcoding anyone's roster into the source.
+function handleConfig(env) {
+  const sampleUrl = (env.SAMPLE_LIST_URL || '').trim();
+  return jsonResponse({
+    ok: true,
+    sampleListUrl: sampleUrl || null,
+    sampleListLabel: (env.SAMPLE_LIST_LABEL || '').trim() || 'Load the sample list',
+    allowedHosts: allowedHostSuffixes(env),
   });
 }
 

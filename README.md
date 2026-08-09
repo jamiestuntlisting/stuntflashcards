@@ -62,11 +62,23 @@ npm run dev     # http://localhost:8787
 
 The setup screen has a **demo roster** (fictional people) so you can try the app without a list URL.
 
+## Shareable list links
+
+Loading a list rewrites the address bar to `/?list=<url>`, and opening that link builds the
+same deck straight away. So a specific roster — a New York crew, a show's stunt team — can be
+bookmarked or sent to someone as a ready-made study link.
+
 ## Configuration
 
-- **`ALLOWED_HOSTS`** (`wrangler.jsonc` → `vars`): comma-separated host suffixes `/api/list` may fetch,
-  so the Worker can't be used as an open proxy. Default `stuntlisting.com`, which also covers
-  subdomains like `site.staging.stuntlisting.com`. Add more suffixes if your lists live elsewhere.
+All in `wrangler.jsonc` → `vars`:
+
+- **`ALLOWED_HOSTS`**: comma-separated host suffixes `/api/list` may fetch, so the Worker can't be
+  used as an open proxy. Default `stuntlisting.com`, which also covers subdomains like
+  `site.staging.stuntlisting.com`. Add more suffixes if your lists live elsewhere.
+- **`SAMPLE_LIST_URL`**: optional. A real, publicly-viewable list URL to offer as a one-click sample
+  deck on the setup screen. Empty by default, which hides the button. The list is fetched live like
+  any other, so no one's roster or headshots are copied into this repo and the sample never goes stale.
+- **`SAMPLE_LIST_LABEL`**: the button's text (default "Load the New York sample").
 
 ## Notes & limits
 

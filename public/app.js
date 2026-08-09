@@ -9,7 +9,7 @@
   const els = {
     setup: $('setup'), study: $('study'), done: $('done'),
     urlInput: $('url-input'), buildBtn: $('build-btn'), status: $('setup-status'),
-    demoBtn: $('demo-btn'), resumeBtn: $('resume-btn'),
+    demoBtn: $('demo-btn'), resumeBtn: $('resume-btn'), sampleBtn: $('sample-btn'),
     optAbout: $('opt-about'), optSkills: $('opt-skills'),
     backBtn: $('back-btn'), reshuffleBtn: $('reshuffle-btn'),
     listTitle: $('list-title'), progress: $('progress'), score: $('score'),
@@ -419,13 +419,15 @@
     return { title: data.title || 'Stunt list', sourceUrl: url, people };
   }
 
-  async function buildFromUrl() {
-    const url = (els.urlInput.value || '').trim();
+  async function buildFromUrl(explicitUrl) {
+    const url = (explicitUrl || els.urlInput.value || '').trim();
     if (!url) {
       showStatus('error', 'Paste a list URL first — or try the demo roster below.');
       return;
     }
+    els.urlInput.value = url;
     els.buildBtn.disabled = true;
+    els.sampleBtn.disabled = true;
     showStatus('loading', 'Fetching the list and building your deck…');
     try {
       const res = await fetch('/api/list?url=' + encodeURIComponent(url));
@@ -433,15 +435,38 @@
       if (!data.ok) throw new Error(data.error || `Could not read that list (HTTP ${res.status}).`);
       const roster = normalizeRoster(data, url);
       if (!roster.people.length) throw new Error('The page was fetched, but no people were found on it.');
+      const withPhotos = roster.people.filter((p) => p.headshot).length;
       state.roster = roster;
       hideStatus();
       saveLocal();
+      // Make the loaded deck a shareable/bookmarkable link.
+      try {
+        const share = new URL(window.location.href);
+        share.searchParams.set('list', url);
+        history.replaceState(null, '', share);
+      } catch { /* non-fatal */ }
       startStudy();
+      if (withPhotos === 0) {
+        showStatus('error', `Loaded ${roster.people.length} people, but none had a headshot the app could read — cards show initials instead.`);
+      }
     } catch (err) {
       showStatus('error', String(err.message || err));
     } finally {
       els.buildBtn.disabled = false;
+      els.sampleBtn.disabled = false;
     }
+  }
+
+  // Optional one-click sample deck, configured server-side via SAMPLE_LIST_URL.
+  async function loadSampleConfig() {
+    try {
+      const res = await fetch('/api/config');
+      const cfg = await res.json();
+      if (!cfg.ok || !cfg.sampleListUrl) return;
+      els.sampleBtn.textContent = cfg.sampleListLabel;
+      els.sampleBtn.classList.remove('hidden');
+      els.sampleBtn.addEventListener('click', () => buildFromUrl(cfg.sampleListUrl));
+    } catch { /* no sample configured — fine */ }
   }
 
   // ------------------------------------------------------------------
@@ -491,7 +516,7 @@
   // Wire-up
   // ------------------------------------------------------------------
 
-  els.buildBtn.addEventListener('click', buildFromUrl);
+  els.buildBtn.addEventListener('click', () => buildFromUrl());
   els.urlInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') buildFromUrl();
   });
@@ -564,4 +589,10 @@
   }
 
   loadLocal();
+  loadSampleConfig();
+
+  // Deep link: /?list=<url> loads that roster straight away, so a specific
+  // list (a New York crew, a show's stunt team) can be bookmarked or shared.
+  const deepLink = new URLSearchParams(window.location.search).get('list');
+  if (deepLink) buildFromUrl(deepLink);
 })();
