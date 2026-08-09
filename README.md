@@ -2,6 +2,8 @@
 
 Paste a StuntListing list URL and learn everyone on it — names, faces, bios, and skills — with flashcards. Runs entirely on **Cloudflare Workers**.
 
+**Live:** https://stunt-flashcards.jamie-181.workers.dev
+
 ## How it works
 
 - Paste a list URL (e.g. `https://stuntlisting.com/lists/…`) and hit **Build flashcards**.
@@ -39,7 +41,8 @@ test/             Parser unit tests + HTML fixtures (`npm test`)
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare dashboard → Workers & Pages → Account ID (right sidebar) |
 
 Once the secrets are set, push (or run the workflow manually from the Actions tab) and the app
-goes live at `https://stunt-flashcards.<your-subdomain>.workers.dev`.
+goes live at `https://stunt-flashcards.<your-subdomain>.workers.dev`. The workflow runs `npm test`
+before deploying, so a parser regression fails the build instead of shipping.
 
 ### Option B — from your machine
 
