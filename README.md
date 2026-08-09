@@ -60,7 +60,8 @@ npm test        # parser unit tests
 npm run dev     # http://localhost:8787
 ```
 
-The setup screen has a **demo roster** (fictional people) so you can try the app without a list URL.
+Set `SAMPLE_LIST_URL` (see Configuration) to get a one-click sample button on the setup screen.
+Rosters are always fetched live — no performer data is stored in this repo.
 
 ## Shareable list links
 

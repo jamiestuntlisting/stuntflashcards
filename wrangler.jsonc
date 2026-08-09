@@ -16,8 +16,8 @@
     // sample deck (e.g. a New York roster). Leave empty to hide the button.
     // Nobody's roster is baked into the repo — it is fetched live like any
     // other list, so the sample stays current and stores nothing.
-    "SAMPLE_LIST_URL": "",
-    "SAMPLE_LIST_LABEL": "Load the New York sample"
+    "SAMPLE_LIST_URL": "https://www.stuntlisting.com/coordinator_dashboard?height=75|87&location=US-New_York&gender=Man&ethnicity=White",
+    "SAMPLE_LIST_LABEL": "Load the New York list"
   },
   "observability": {
     "enabled": true

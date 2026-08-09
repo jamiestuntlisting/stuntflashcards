@@ -9,7 +9,7 @@
   const els = {
     setup: $('setup'), study: $('study'), done: $('done'),
     urlInput: $('url-input'), buildBtn: $('build-btn'), status: $('setup-status'),
-    demoBtn: $('demo-btn'), resumeBtn: $('resume-btn'), sampleBtn: $('sample-btn'),
+    resumeBtn: $('resume-btn'), sampleBtn: $('sample-btn'),
     optAbout: $('opt-about'), optSkills: $('opt-skills'),
     backBtn: $('back-btn'), reshuffleBtn: $('reshuffle-btn'),
     listTitle: $('list-title'), progress: $('progress'), score: $('score'),
@@ -422,7 +422,7 @@
   async function buildFromUrl(explicitUrl) {
     const url = (explicitUrl || els.urlInput.value || '').trim();
     if (!url) {
-      showStatus('error', 'Paste a list URL first — or try the demo roster below.');
+      showStatus('error', 'Paste a list URL first.');
       return;
     }
     els.urlInput.value = url;
@@ -470,62 +470,12 @@
   }
 
   // ------------------------------------------------------------------
-  // Demo roster (fictional people, generated avatars)
-  // ------------------------------------------------------------------
-
-  function demoRoster() {
-    const mk = (name, about, skills) => ({ name, headshot: avatarDataUri(name), about, skills });
-    return {
-      title: 'Demo Roster (fictional)',
-      sourceUrl: null,
-      people: [
-        mk('Rex Calloway', 'Twenty years of precision driving and car hits. Started on the demolition derby circuit in Bakersfield before moving into film work. If it has four wheels and a handbrake, Rex has slid it sideways past a camera.', [
-          { name: 'Precision Driving', description: 'Studio-certified stunt driver: 90-degree slides, reverse 180s, pipe ramps, and close-quarters chase choreography with A-camera vehicles.' },
-          { name: 'Car Hits', description: 'Full-speed pedestrian car hits with air ram assists — over 40 on-screen hits without a lost day.' },
-        ]),
-        mk('Mina Torres', 'Former national-team gymnast turned wire specialist. Known for making 60-foot descender falls look like the character simply forgot gravity existed.', [
-          { name: 'Wire Work', description: 'Flying rigs, pendulum swings, and descender work up to 80 feet; comfortable doubling leads in harness-heavy sequences.' },
-          { name: 'High Falls', description: 'Certified to 60 feet into airbags and boxes; specialty is falls that start from a fight and end through breakaway set pieces.' },
-        ]),
-        mk('Dutch Okafor', 'Six-four, 240, and somehow the softest landings on the crew. Dutch spent eight years as a rodeo pickup rider before a coordinator spotted him and put him through a burning barn on day one.', [
-          { name: 'Horseback', description: 'Saddle falls, drags, and transfers at full gallop; trains his own falling horses and doubles riders of any experience level.' },
-          { name: 'Fire Burns', description: 'Full burns to 25 seconds with gel prep; partial burns, torch work, and burn-and-fall combinations.' },
-        ]),
-        mk('Sable Nguyen', 'Grew up in her family’s martial arts school, then spent five years on a Hong Kong stunt team. Choreographs as fast as she performs and doubles three current franchise leads.', [
-          { name: 'Martial Arts', description: 'Wushu, taekwondo, and screen-fighting choreography; five years with a Hong Kong action unit doing wire-assisted fight sequences.' },
-          { name: 'Fight Choreography', description: 'Previz-ready fight design: builds, shoots, and cuts stunt-viz for multi-performer brawls and one-take corridor fights.' },
-        ]),
-        mk('Cash Delgado', 'The guy coordinators call when the gag involves two wheels and no second take. Ex-motocross pro with three X Games medals and one very understanding insurance agent.', [
-          { name: 'Motorcycle', description: 'Motocross, road race, and trials riding; ramp-to-ramp transfers, high-side lay-downs, and lane-splitting chase work at speed.' },
-        ]),
-        mk('Petra Lindqvist', 'Free-diver and cold-water specialist from Gothenburg. Holds her breath longer than most directors hold a shot, and rigs her own underwater escape gags.', [
-          { name: 'Underwater', description: 'Static breath hold of 5:30; car-in-water escapes, sunken-set fight work, and safety diving for cast in open water and tanks.' },
-        ]),
-        mk('Judo Kim', 'Olympic-alternate judoka who discovered that falling for a living pays better than throwing. Specializes in being thrown through furniture that costs more than his car.', [
-          { name: 'Falls & Ratchets', description: 'Ratchet yanks through breakaways, stair falls to 30 steps, and hard-surface reaction falls sold at close camera distance.' },
-        ]),
-        mk('Faye Moreau', 'Parkour athlete turned building-jumper. If the location scout finds a rooftop, Faye has already mentally mapped four ways off of it — three of them approved by safety.', [
-          { name: 'Parkour', description: 'Roof gaps to 14 feet, cat leaps, wall runs, and precision landings in street clothes; doubles for rooftop chase sequences.' },
-          { name: 'High Falls', description: 'Falls to 45 feet including backwards and rotating exits off ledges, balconies, and moving set pieces.' },
-        ]),
-      ],
-    };
-  }
-
-  // ------------------------------------------------------------------
   // Wire-up
   // ------------------------------------------------------------------
 
   els.buildBtn.addEventListener('click', () => buildFromUrl());
   els.urlInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') buildFromUrl();
-  });
-
-  els.demoBtn.addEventListener('click', () => {
-    state.roster = demoRoster();
-    hideStatus();
-    saveLocal();
-    startStudy();
   });
 
   els.resumeBtn.addEventListener('click', () => {

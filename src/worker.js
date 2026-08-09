@@ -137,10 +137,15 @@ async function handleList(request, env, ctx) {
   }
 
   if (!page.ok && (!result || result.people.length === 0)) {
-    return jsonResponse(
-      { ok: false, error: `Could not fetch that page (${page.status || page.errorMessage}). Is the URL right and publicly viewable?`, attempts },
-      502
-    );
+    // 401/403 on a page you can see in your own browser almost always means the
+    // page is behind your login session, which this Worker does not have.
+    const authWalled = page.status === 401 || page.status === 403;
+    const error = authWalled
+      ? `That page returned ${page.status} (not authorised) when fetched without a login. Pages like ` +
+        `/coordinator_dashboard are visible to you because you are signed in — this app fetches them ` +
+        `anonymously, so it sees the sign-in wall instead. Use a publicly shareable list link if there is one.`
+      : `Could not fetch that page (${page.status || page.errorMessage}). Is the URL right and publicly viewable?`;
+    return jsonResponse({ ok: false, error, attempts, needsAuth: authWalled }, 502);
   }
 
   if (!result || result.people.length === 0) {

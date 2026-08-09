@@ -123,6 +123,25 @@ test('client-rendered SPA page reports no people with the right diagnostics', ()
   assert.equal(diagnostics.clientRendered, true);
 });
 
+test('login-gated dashboard is reported as needing auth, not as an empty list', () => {
+  const { people, diagnostics } = parseListDocument({
+    body: fixture('login-gated.html'),
+    contentType: 'text/html',
+    finalUrl: 'https://www.stuntlisting.com/coordinator_dashboard?location=US-New_York',
+  });
+  assert.equal(people.length, 0);
+  assert.equal(diagnostics.loginPage, true, 'password field marks the page as auth-gated');
+});
+
+test('a redirect to a sign-in URL is detected even without a password field', () => {
+  const { diagnostics } = parseListDocument({
+    body: '<html><body><p>Redirecting…</p></body></html>',
+    contentType: 'text/html',
+    finalUrl: 'https://www.stuntlisting.com/sign-in?next=/coordinator_dashboard',
+  });
+  assert.equal(diagnostics.loginPage, true);
+});
+
 test('raw JSON API response is parsed directly', () => {
   const body = JSON.stringify({
     data: {
