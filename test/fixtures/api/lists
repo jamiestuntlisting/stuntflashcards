@@ -1,0 +1,25 @@
+{
+  "list": {
+    "name": "New York — Stunt Performers",
+    "results": [
+      {
+        "id": 101,
+        "full_name": "Test Performer One",
+        "headshot_url": "https://cdn.example.com/headshots/one.jpg",
+        "about_me": "Fixture record standing in for a real roster entry so the API-probing path can be tested without touching live data.",
+        "skills": [
+          { "name": "High Falls", "description": "Falls to 60 feet into airbags, including rotating exits off ledges." }
+        ]
+      },
+      {
+        "id": 102,
+        "full_name": "Test Performer Two",
+        "headshot_url": "https://cdn.example.com/headshots/two.jpg",
+        "about_me": "Second fixture record; exists only so the roster array has more than one photographed member.",
+        "skills": [
+          { "name": "Precision Driving", "description": "Reverse 180s, slides, and close-quarters chase choreography." }
+        ]
+      }
+    ]
+  }
+}

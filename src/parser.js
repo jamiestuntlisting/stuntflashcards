@@ -479,3 +479,40 @@ export function parseListDocument({ body, contentType, finalUrl }) {
   diagnostics.source = 'none';
   return { title, people: [], diagnostics };
 }
+
+// ---------------------------------------------------------------------------
+// API endpoint guessing
+// ---------------------------------------------------------------------------
+
+// When a page turns out to be client-rendered, its roster came from an API.
+// These are the conventional places that API tends to live, in rough order of
+// likelihood. Query strings are preserved so filters (location, height, …)
+// carry over to the API call.
+export function apiCandidateUrls(rawUrl) {
+  let u;
+  try {
+    u = new URL(rawUrl);
+  } catch {
+    return [];
+  }
+  const q = u.search || '';
+  const path = u.pathname.replace(/\/+$/, '') || '/';
+  const self = u.toString();
+  const out = [];
+  const add = (p) => {
+    const full = u.origin + p;
+    if (full !== self && !out.includes(full)) out.push(full);
+  };
+
+  if (!path.startsWith('/api/')) add('/api' + path + q);
+  add('/api/lists' + q);
+  add('/api/list' + q);
+  add('/api/v1/lists' + q);
+  add('/api/performers' + q);
+  add('/api/v1/performers' + q);
+  add('/api/talent' + q);
+  add('/api/search' + q);
+  if (path !== '/') add(path + '.json' + q);
+
+  return out.slice(0, 9);
+}

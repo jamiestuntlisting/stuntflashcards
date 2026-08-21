@@ -1,4 +1,4 @@
-import { parseListDocument, stripTags } from './parser.js';
+import { parseListDocument, stripTags, apiCandidateUrls } from './parser.js';
 
 const BROWSER_HEADERS = {
   'User-Agent':
@@ -125,15 +125,24 @@ async function handleList(request, env, ctx) {
     }
   }
 
-  // Attempt 3: common REST convention — /lists/123 -> /api/lists/123
-  if ((!result || result.people.length === 0) && !target.pathname.startsWith('/api/')) {
-    const guess = new URL(target.toString());
-    guess.pathname = '/api' + guess.pathname;
-    const apiTry = await fetchText(guess.toString(), { ...BROWSER_HEADERS, Accept: 'application/json' });
-    attempts.push(describeAttempt(guess.toString(), apiTry));
-    if (apiTry.ok && /json/i.test(apiTry.contentType || '')) {
+  // Attempt 3+: a client-rendered page means the roster came from an API, so
+  // probe the conventional endpoints — /api/lists, /api/list and friends —
+  // carrying the query filters across. First one that yields people wins.
+  let apiEndpoint = null;
+  if (!result || result.people.length === 0) {
+    for (const candidate of apiCandidateUrls(target.toString())) {
+      const apiTry = await fetchText(candidate, { ...BROWSER_HEADERS, Accept: 'application/json' });
+      attempts.push(describeAttempt(candidate, apiTry));
+      if (!apiTry.ok) continue;
+      const looksJson =
+        /json/i.test(apiTry.contentType || '') || /^\s*[[{]/.test((apiTry.body || '').slice(0, 64));
+      if (!looksJson) continue;
       const parsed = parseListDocument({ body: apiTry.body, contentType: apiTry.contentType, finalUrl: apiTry.finalUrl });
-      if (parsed.people.length) result = { ...parsed, title: result?.title || parsed.title || '' };
+      if (parsed.people.length) {
+        result = { ...parsed, title: result?.title || parsed.title || '' };
+        apiEndpoint = candidate;
+        break;
+      }
     }
   }
 
@@ -163,7 +172,7 @@ async function handleList(request, env, ctx) {
     sourceUrl: target.toString(),
     fetchedAt: new Date().toISOString(),
     people: result.people,
-    diagnostics: { ...result.diagnostics, attempts },
+    diagnostics: { ...result.diagnostics, apiEndpoint, attempts },
   };
   const res = jsonResponse(payload, 200, { 'Cache-Control': `public, max-age=${LIST_CACHE_SECONDS}` });
   ctx.waitUntil(cache.put(cacheKey, res.clone()));

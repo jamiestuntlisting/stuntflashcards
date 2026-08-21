@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import {
+  apiCandidateUrls,
   parseListDocument,
   extractJsonBlobs,
   findPeopleInJson,
@@ -185,6 +186,27 @@ test('JSON.parse("...") payloads inside scripts are decoded', () => {
   const people = blobs.flatMap((b) => findPeopleInJson(b, BASE));
   assert.equal(people.length, 2);
   assert.equal(people[0].name, 'Pia Cruz');
+});
+
+test('apiCandidateUrls probes the conventional endpoints and keeps filters', () => {
+  const src = 'https://www.stuntlisting.com/coordinator_dashboard?height=75|87&location=US-New_York';
+  const c = apiCandidateUrls(src);
+
+  assert.ok(c.includes('https://www.stuntlisting.com/api/lists?height=75|87&location=US-New_York'), '/api/lists tried');
+  assert.ok(c.includes('https://www.stuntlisting.com/api/list?height=75|87&location=US-New_York'), '/api/list tried');
+  assert.ok(
+    c.includes('https://www.stuntlisting.com/api/coordinator_dashboard?height=75|87&location=US-New_York'),
+    '/api + original path tried'
+  );
+  assert.ok(c.every((u) => u.includes('location=US-New_York')), 'every candidate carries the filters');
+  assert.ok(!c.includes(src), 'never re-fetches the original URL');
+  assert.ok(c.length <= 9, 'candidate count is capped');
+});
+
+test('apiCandidateUrls does not double-prefix an /api/ path or crash on junk', () => {
+  const c = apiCandidateUrls('https://www.stuntlisting.com/api/lists?x=1');
+  assert.ok(!c.some((u) => u.includes('/api/api/')), 'no /api/api/ double prefix');
+  assert.deepEqual(apiCandidateUrls('not a url'), []);
 });
 
 test('stripTags flattens markup and decodes entities', () => {
