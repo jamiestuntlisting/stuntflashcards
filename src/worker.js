@@ -1,4 +1,4 @@
-import { parseListDocument } from './parser.js';
+import { parseListDocument, stripTags } from './parser.js';
 
 const BROWSER_HEADERS = {
   'User-Agent':
@@ -16,6 +16,7 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === '/api/config') return handleConfig(env);
+    if (url.pathname === '/api/discover') return handleDiscover(request, env);
     if (url.pathname === '/api/list') return handleList(request, env, ctx);
     if (url.pathname === '/api/img') return handleImage(request, env, ctx);
     if (url.pathname.startsWith('/api/')) return jsonResponse({ ok: false, error: 'Unknown API endpoint' }, 404);
@@ -188,6 +189,82 @@ async function fetchText(url, headers) {
   } catch (err) {
     return { ok: false, status: 0, errorMessage: String(err && err.message ? err.message : err), body: '', finalUrl: url };
   }
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/discover?url=<page url>
+//
+// Diagnostic for client-rendered pages: the roster is not in the HTML, so this
+// fetches the page, follows its script bundles, and reports the API endpoints
+// they reference. Host-allowlisted exactly like /api/list.
+// ---------------------------------------------------------------------------
+
+const DISCOVER_MAX_BUNDLES = 8;
+const DISCOVER_MAX_HINTS = 150;
+
+function collectApiHints(text, hints) {
+  if (!text) return;
+  const patterns = [
+    /["'`](\/api\/[A-Za-z0-9_\-./:{}$?&=%]{2,100})["'`]/g,
+    /["'`](\/[A-Za-z0-9_\-./]{0,40}(?:performer|talent|profile|roster|listing|member|search|directory|dashboard)[A-Za-z0-9_\-./?&=%]{0,60})["'`]/gi,
+    /(https?:\/\/[a-z0-9.-]+\.supabase\.(?:co|in)[^"'`\s\\]{0,120})/gi,
+    /(https?:\/\/[a-z0-9.-]*api[a-z0-9.-]*\.[a-z]{2,}[^"'`\s\\]{0,120})/gi,
+    /["'`]([^"'`\s]{0,60}\/graphql[^"'`\s]{0,40})["'`]/gi,
+  ];
+  for (const re of patterns) {
+    let m;
+    while ((m = re.exec(text)) && hints.size < DISCOVER_MAX_HINTS) {
+      const v = (m[1] || '').trim();
+      if (v && v.length > 3) hints.add(v);
+    }
+  }
+}
+
+async function handleDiscover(request, env) {
+  const reqUrl = new URL(request.url);
+  const { target, error } = parseTargetUrl(reqUrl.searchParams.get('url'));
+  if (error) return jsonResponse({ ok: false, error }, 400);
+
+  const suffixes = allowedHostSuffixes(env);
+  if (!hostAllowed(target.hostname, suffixes)) {
+    return jsonResponse({ ok: false, error: `Only these hosts may be inspected: ${suffixes.join(', ')}` }, 400);
+  }
+
+  const page = await fetchText(target.toString(), { ...BROWSER_HEADERS });
+  const html = page.body || '';
+  const hints = new Set();
+  collectApiHints(html, hints);
+
+  const scripts = [];
+  const srcRe = /<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
+  let m;
+  while ((m = srcRe.exec(html)) && scripts.length < 25) {
+    try {
+      scripts.push(new URL(m[1], page.finalUrl).toString());
+    } catch { /* skip unparseable src */ }
+  }
+
+  const bundles = [];
+  for (const src of scripts.slice(0, DISCOVER_MAX_BUNDLES)) {
+    const js = await fetchText(src, { ...BROWSER_HEADERS, Accept: '*/*' });
+    bundles.push({ url: src, status: js.status, bytes: (js.body || '').length });
+    if (js.ok) collectApiHints(js.body, hints);
+  }
+
+  return jsonResponse({
+    ok: true,
+    page: {
+      status: page.status,
+      contentType: page.contentType,
+      finalUrl: page.finalUrl,
+      htmlBytes: html.length,
+      visibleTextBytes: stripTags(html).length,
+      redirected: page.finalUrl !== target.toString(),
+    },
+    scriptCount: scripts.length,
+    bundles,
+    apiCandidates: [...hints].sort(),
+  });
 }
 
 // ---------------------------------------------------------------------------
