@@ -516,3 +516,50 @@ export function apiCandidateUrls(rawUrl) {
 
   return out.slice(0, 9);
 }
+
+// ---------------------------------------------------------------------------
+// GraphQL operation extraction
+// ---------------------------------------------------------------------------
+
+// Match a balanced {...} run starting at startIdx. GraphQL documents rarely
+// contain braces inside strings, so plain counting is enough — but bail out
+// rather than scan forever on minified junk.
+export function sliceBalancedBraces(text, startIdx, maxLen = 8000) {
+  if (text[startIdx] !== '{') return null;
+  let depth = 0;
+  const end = Math.min(text.length, startIdx + maxLen);
+  for (let i = startIdx; i < end; i++) {
+    const c = text[i];
+    if (c === '{') depth++;
+    else if (c === '}') {
+      depth--;
+      if (depth === 0) return text.slice(startIdx, i + 1);
+    }
+  }
+  return null;
+}
+
+const INTERESTING_OP = /list|performer|user|profile|search|roster|member|talent|skill/i;
+
+// Pull GraphQL operation definitions out of a bundle. Returns operation
+// signatures ("query GetList") plus the full text of the ones that look
+// roster-related, so the real query can be copied rather than guessed.
+export function extractGraphqlOperations(text, acc = { names: new Set(), documents: [] }) {
+  if (!text) return acc;
+  const re = /\b(query|mutation)\s+([A-Za-z_]\w*)\s*(\([^)]{0,600}\))?\s*\{/g;
+  let m;
+  while ((m = re.exec(text))) {
+    if (acc.names.size > 300) break;
+    const [full, kind, name] = m;
+    acc.names.add(`${kind} ${name}${m[3] || ''}`.slice(0, 300));
+    const braceIdx = m.index + full.length - 1;
+    if (acc.documents.length >= 10) continue;
+    const body = sliceBalancedBraces(text, braceIdx);
+    if (!body) continue;
+    const doc = text.slice(m.index, braceIdx) + body;
+    if (INTERESTING_OP.test(name) || INTERESTING_OP.test(body.slice(0, 400))) {
+      acc.documents.push(doc.slice(0, 4000));
+    }
+  }
+  return acc;
+}

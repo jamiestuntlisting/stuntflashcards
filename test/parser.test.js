@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 
 import {
   apiCandidateUrls,
+  extractGraphqlOperations,
   parseListDocument,
   extractJsonBlobs,
   findPeopleInJson,
@@ -207,6 +208,37 @@ test('apiCandidateUrls does not double-prefix an /api/ path or crash on junk', (
   const c = apiCandidateUrls('https://www.stuntlisting.com/api/lists?x=1');
   assert.ok(!c.some((u) => u.includes('/api/api/')), 'no /api/api/ double prefix');
   assert.deepEqual(apiCandidateUrls('not a url'), []);
+});
+
+test('extractGraphqlOperations finds operations and keeps roster-shaped documents', () => {
+  const bundle = [
+    'var a=1;',
+    'const Q=gql`query GetList($id: Int!) { getList(id: $id) { id name users { id first_name last_name display_image profileNote } } }`;',
+    'const M="mutation Login($email: String!) { login(email: $email) { access_token refresh_token } }";',
+    'const Z="query Ping { ping { ok } }";',
+  ].join('\n');
+
+  const acc = extractGraphqlOperations(bundle);
+  const names = [...acc.names];
+
+  assert.ok(names.some((n) => n.startsWith('query GetList')), 'found the list query');
+  assert.ok(names.some((n) => n.startsWith('mutation Login')), 'found the login mutation');
+  assert.ok(names.some((n) => n.startsWith('query Ping')), 'found unrelated ops too');
+
+  const listDoc = acc.documents.find((d) => d.includes('getList'));
+  assert.ok(listDoc, 'roster-shaped document captured in full');
+  assert.match(listDoc, /display_image/, 'document retains the headshot field');
+  assert.match(listDoc, /profileNote/, 'document retains the about field');
+  assert.ok(listDoc.trim().endsWith('}'), 'document is brace-balanced');
+
+  assert.ok(!acc.documents.some((d) => d.includes('ping')), 'boring ops are not stored as documents');
+});
+
+test('extractGraphqlOperations survives minified junk without hanging', () => {
+  const junk = 'query Broken { unclosed ' + 'x'.repeat(20000);
+  const acc = extractGraphqlOperations(junk);
+  assert.ok([...acc.names].some((n) => n.includes('Broken')), 'name still recorded');
+  assert.equal(acc.documents.length, 0, 'unbalanced body is not captured');
 });
 
 test('stripTags flattens markup and decodes entities', () => {

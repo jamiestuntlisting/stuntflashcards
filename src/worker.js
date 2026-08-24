@@ -1,4 +1,4 @@
-import { parseListDocument, stripTags, apiCandidateUrls } from './parser.js';
+import { parseListDocument, stripTags, apiCandidateUrls, extractGraphqlOperations } from './parser.js';
 
 const BROWSER_HEADERS = {
   'User-Agent':
@@ -208,8 +208,19 @@ async function fetchText(url, headers) {
 // they reference. Host-allowlisted exactly like /api/list.
 // ---------------------------------------------------------------------------
 
-const DISCOVER_MAX_BUNDLES = 8;
+const DISCOVER_MAX_BUNDLES = 18;
 const DISCOVER_MAX_HINTS = 150;
+const DISCOVER_MAX_TOTAL_BYTES = 6_000_000;
+
+// Framework/polyfill chunks never carry app queries; page and app chunks do.
+// Sort so the useful ones are fetched first when the bundle budget is tight.
+function rankBundle(url) {
+  if (/\/pages\/(?!_)/i.test(url)) return 0;      // pages/lists/[id]-hash.js
+  if (/\/pages\/_app/i.test(url)) return 1;
+  if (/framework|polyfill|webpack|runtime/i.test(url)) return 9;
+  if (/\bmain[-.]/i.test(url)) return 3;
+  return 2;                                        // anonymous split chunks
+}
 
 function collectApiHints(text, hints) {
   if (!text) return;
@@ -253,11 +264,31 @@ async function handleDiscover(request, env) {
     } catch { /* skip unparseable src */ }
   }
 
+  // Page-specific chunks first — that is where the app's own queries live.
+  const ordered = scripts.slice().sort((a, b) => rankBundle(a) - rankBundle(b));
+
+  const gql = { names: new Set(), documents: [] };
   const bundles = [];
-  for (const src of scripts.slice(0, DISCOVER_MAX_BUNDLES)) {
+  let totalBytes = 0;
+  for (const src of ordered.slice(0, DISCOVER_MAX_BUNDLES)) {
+    if (totalBytes > DISCOVER_MAX_TOTAL_BYTES) {
+      bundles.push({ url: src, status: null, bytes: 0, skipped: 'byte budget reached' });
+      continue;
+    }
     const js = await fetchText(src, { ...BROWSER_HEADERS, Accept: '*/*' });
-    bundles.push({ url: src, status: js.status, bytes: (js.body || '').length });
-    if (js.ok) collectApiHints(js.body, hints);
+    const body = js.body || '';
+    totalBytes += body.length;
+    const opsBefore = gql.names.size;
+    if (js.ok) {
+      collectApiHints(body, hints);
+      extractGraphqlOperations(body, gql);
+    }
+    bundles.push({
+      url: src,
+      status: js.status,
+      bytes: body.length,
+      newOperations: gql.names.size - opsBefore,
+    });
   }
 
   return jsonResponse({
@@ -271,8 +302,11 @@ async function handleDiscover(request, env) {
       redirected: page.finalUrl !== target.toString(),
     },
     scriptCount: scripts.length,
-    bundles,
+    bundlesFetched: bundles.length,
     apiCandidates: [...hints].sort(),
+    graphqlOperations: [...gql.names].sort(),
+    graphqlDocuments: gql.documents,
+    bundles,
   });
 }
 
